@@ -4,6 +4,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,44 +24,63 @@ import java.util.Optional;
 @RestController
 public class UserController {
 
-	@Autowired
-	CustomUserDetailsService customUserDetailsService;
+    @Autowired
+    private CustomUserDetailsService customUserDetailsService;
 
-	@PostMapping("/register")
-	public ResponseEntity<?> register(@RequestBody User user) {
+    @Autowired
+    private AuthenticationManager authenticationManager;
 
-		if (user.getUsername() == null && 
-				user.getPassword() == null) {
-			
-			return ResponseEntity
-					.status(HttpStatus.BAD_REQUEST)
-					.body(" Bad Request....");
-		}
-		User userDet = customUserDetailsService.saveUserDetails(user);
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody User user) {
 
-		return ResponseEntity
-				.status(HttpStatus.CREATED)
-				.body("Account created Sucessfully...." + userDet);
-	}
+        if (user.getUsername() == null || user.getUsername().isBlank()
+                || user.getPassword() == null || user.getPassword().isBlank()) {
 
-	@PostMapping("/login")
-	public ResponseEntity<?> login(@RequestBody AuthRequest request) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body("Username and Password are required");
+        }
 
-		String username = request.getUsername();
-		String password = request.getPassword();
-		UserDetails user = customUserDetailsService.loadUserByUsername(username);
+        User savedUser = customUserDetailsService.saveUserDetails(user);
 
-		if (user == null)
-			return ResponseEntity
-					.status(HttpStatus.NOT_FOUND)
-					.body("Login details not found ....");
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body("Account created successfully for user : "
+                        + savedUser.getUsername());
+    }
 
-		return ResponseEntity
-				.status(HttpStatus.OK)
-				.body("Login Sucessfully...."+user);
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody AuthRequest request) {
 
-	}
+        try {
 
+            Authentication authentication =
+                    authenticationManager.authenticate(
+                            new UsernamePasswordAuthenticationToken(
+                                    request.getUsername(),
+                                    request.getPassword()));
+
+            return ResponseEntity.ok(
+                    "Login Successful : " + authentication.getName());
+
+        } catch (BadCredentialsException ex) {
+
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body("Invalid username or password");
+
+        } catch (Exception ex) {
+
+            ex.printStackTrace();
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Authentication failed");
+        }
+    }
+
+   
+    
 	@GetMapping("/users")
 	public ResponseEntity<?> getAllUsers() {
 

@@ -24,7 +24,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
             	.requestMatchers(
             			"/register",
-            			"/login"
+            			"/login",
+            			"/authenticate"
             			).permitAll()
                 .anyRequest().authenticated())
             .httpBasic(Customizer.withDefaults());
@@ -47,7 +48,9 @@ public class SecurityConfig {
             UserDetailsService userDetailsService,
             PasswordEncoder passwordEncoder) {
 
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+        DaoAuthenticationProvider provider =
+                new DaoAuthenticationProvider(userDetailsService);
+
         provider.setPasswordEncoder(passwordEncoder);
 
         return new ProviderManager(provider);

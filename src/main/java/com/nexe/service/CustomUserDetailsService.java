@@ -29,7 +29,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 	    if (userDetailsRepo.existsByUsername(user.getUsername())) {
 	        throw new UserAlreadyExitsException("Username already exists");
 	    }
-	   // user.setPassword(passwordEncoder.encode(user.getPassword()));
+	   user.setPassword(passwordEncoder.encode(user.getPassword()));
 	    return userDetailsRepo.save(user);
 	}
 
