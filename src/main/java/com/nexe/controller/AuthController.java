@@ -18,49 +18,125 @@ import org.springframework.web.bind.annotation.RestController;
 import com.nexe.securityapp.dto.AuthRequest;
 import com.nexe.util.JwtUtil;
 
+/**
+ * AUTH CONTROLLER
+ *
+ * PURPOSE:
+ * - Handles login/authentication requests
+ * - Validates user credentials
+ * - Generates JWT token on successful login
+ *
+ * FLOW:
+ * Client → /authenticate → Spring Security AuthenticationManager → JWT generation → Response
+ */
 @RestController
 public class AuthController {
-	
-	@Autowired
-	AuthenticationManager authenticationManager ;
-	@Autowired
-	 PasswordEncoder passwordEncoder ;
-	@Autowired
-	JwtUtil jwtUtil ;
-	
-	@PostMapping("/authenticate")
-	public ResponseEntity<?> authenticate(@RequestBody AuthRequest authRequest) {
 
-		  Authentication auth  =null;
-	    try {
+    /**
+     * AUTHENTICATION MANAGER
+     *
+     * PURPOSE:
+     * - Core Spring Security component
+     * - Validates username + password against UserDetailsService + PasswordEncoder
+     */
+    @Autowired
+    AuthenticationManager authenticationManager;
 
-	         auth =
-	                authenticationManager.authenticate(
-	                        new UsernamePasswordAuthenticationToken(
-	                                authRequest.getUsername(),
-	                                authRequest.getPassword()));
+    /**
+     * PASSWORD ENCODER
+     *
+     * NOTE:
+     * - Not used directly here (Spring uses it internally via AuthenticationManager)
+     * - Can be removed unless used elsewhere (e.g., registration)
+     */
+    @Autowired
+    PasswordEncoder passwordEncoder;
 
-	        String jwtToken = jwtUtil.generateToken(authRequest.getUsername());
+    /**
+     * JWT UTILITY
+     *
+     * PURPOSE:
+     * - Generates JWT token after successful authentication
+     */
+    @Autowired
+    JwtUtil jwtUtil;
 
-	        Map<String, Object> response = new HashMap();
-	        response.put("message", "Authentication successful");
-	        response.put("token", jwtToken);
-	        response.put("username", auth.getName());
-	        response.put("isAuthenticated",auth.isAuthenticated());
+    /**
+     * LOGIN / AUTHENTICATION ENDPOINT
+     *
+     * PURPOSE:
+     * - Accepts username/password from client
+     * - Authenticates credentials
+     * - Returns JWT token if valid
+     */
+    @PostMapping("/authenticate")
+    public ResponseEntity<?> authenticate(@RequestBody AuthRequest authRequest) {
 
-	        return ResponseEntity.ok(response);
+        Authentication auth = null;
 
-	    } catch (BadCredentialsException ex) {
+        try {
 
-	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-	                .body(Map.of(
-	                        "message", "Invalid username or password"));
+            /**
+             * STEP 1: AUTHENTICATE USER CREDENTIALS
+             *
+             * - Delegates to AuthenticationManager
+             * - Internally checks:
+             *   -> User exists (UserDetailsService)
+             *   -> Password matches (PasswordEncoder)
+             */
+            auth = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            authRequest.getUsername(),
+                            authRequest.getPassword()
+                    )
+            );
 
-	    } catch (Exception ex) {
+            /**
+             * STEP 2: GENERATE JWT TOKEN
+             *
+             * - Only created after successful authentication
+             * - Token contains username as subject
+             */
+            String jwtToken = jwtUtil.generateToken(authRequest.getUsername());
 
-	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-	                .body(Map.of(
-	                        "message", "Authentication failed"));
-	    }
-	}
+            /**
+             * STEP 3: BUILD RESPONSE
+             *
+             * - Returns token + basic user info
+             * - Client will store token and send in Authorization header
+             */
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Authentication successful");
+            response.put("token", jwtToken);
+            response.put("username", auth.getName());
+            response.put("isAuthenticated", auth.isAuthenticated());
+
+            return ResponseEntity.ok(response);
+
+        } catch (BadCredentialsException ex) {
+
+            /**
+             * HANDLES INVALID LOGIN CREDENTIALS
+             *
+             * - Wrong username/password
+             * - Authentication fails at Spring Security level
+             */
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of(
+                            "message", "Invalid username or password"
+                    ));
+
+        } catch (Exception ex) {
+
+            /**
+             * GENERIC ERROR HANDLING
+             *
+             * - Covers unexpected errors (DB failure, config issues, etc.)
+             */
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "message", "Authentication failed"
+                    ));
+        }
+    }
 }

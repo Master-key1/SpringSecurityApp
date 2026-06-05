@@ -80,25 +80,15 @@ public class UserController {
     }
 
    
-    
+   
+
 	@GetMapping("/users")
-	public ResponseEntity<?> getAllUsers() {
+	public ResponseEntity<?> getUserById() {
 
-		return ResponseEntity.ok(List.of(Map.of("id", 1, "name", "John"), Map.of("id", 2, "name", "Jane")));
+		return ResponseEntity.ok(Map.of("id", 1, "name", "John Doe", "email", "john@example.com"));
 	}
 
-	@GetMapping("/users/{id}")
-	public ResponseEntity<?> getUserById(@PathVariable Long id) {
-
-		return ResponseEntity.ok(Map.of("id", id, "name", "John Doe", "email", "john@example.com"));
-	}
-
-	@PostMapping("/users")
-	public ResponseEntity<?> createUser(@RequestBody Map<String, Object> user) {
-
-		return ResponseEntity.ok(Map.of("message", "User created", "user", user));
-	}
-
+	
 	@PutMapping("/users/{id}")
 	public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody Map<String, Object> user) {
 
