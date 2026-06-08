@@ -45,7 +45,7 @@ public class JwtUtil {
      * NOTE:
      * - 1 minute is very short (usually 15 min–24 hrs in real apps)
      */
-    private static final long EXPIRATION_TIME = 1000 * 60;
+    private static final long EXPIRATION_TIME = 1000 * 60 *60;
 
     /**
      * SIGNING KEY OBJECT

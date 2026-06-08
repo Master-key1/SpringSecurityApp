@@ -8,84 +8,78 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
+import com.nexe.entity.ResetPasswordRequest;
 import com.nexe.entity.User;
-import com.nexe.repo.UserDetailsRepo;
 import com.nexe.securityapp.dto.AuthRequest;
 import com.nexe.service.CustomUserDetailsService;
+import com.nexe.service.DynamicSQLRunner;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 public class UserController {
 
-    @Autowired
-    private CustomUserDetailsService customUserDetailsService;
+	@Autowired
+	private CustomUserDetailsService customUserDetailsService;
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
+	@Autowired
+	private AuthenticationManager authenticationManager;
 
-    @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody User user) {
+	@Autowired
+	DynamicSQLRunner dynamicSQLRunner;
 
-        if (user.getUsername() == null || user.getUsername().isBlank()
-                || user.getPassword() == null || user.getPassword().isBlank()) {
+	@PostMapping("/register")
+	public ResponseEntity<?> register(@RequestBody User user) {
 
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body("Username and Password are required");
-        }
+		if (user.getUsername() == null || user.getUsername().isBlank() || user.getPassword() == null
+				|| user.getPassword().isBlank()) {
 
-        User savedUser = customUserDetailsService.saveUserDetails(user);
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Username and Password are required");
+		}
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body("Account created successfully for user : "
-                        + savedUser.getUsername());
-    }
+		User savedUser = customUserDetailsService.saveUserDetails(user);
 
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody AuthRequest request) {
-
-        try {
-
-            Authentication authentication =
-                    authenticationManager.authenticate(
-                            new UsernamePasswordAuthenticationToken(
-                                    request.getUsername(),
-                                    request.getPassword()));
-
-            return ResponseEntity.ok(
-                    "Login Successful : " + authentication.getName());
-
-        } catch (BadCredentialsException ex) {
-
-            return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
-                    .body("Invalid username or password");
-
-        } catch (Exception ex) {
-
-            ex.printStackTrace();
-
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Authentication failed");
-        }
-    }
-
-   
-   
-
-	@GetMapping("/users")
-	public ResponseEntity<?> getUserById() {
-
-		return ResponseEntity.ok(Map.of("id", 1, "name", "John Doe", "email", "john@example.com"));
+		return ResponseEntity.status(HttpStatus.CREATED)
+				.body("Account created successfully for user : " + savedUser.getUsername());
 	}
 
+	@PostMapping("/login")
+	public ResponseEntity<?> login(@RequestBody AuthRequest request) {
+
+		try {
+
+			Authentication authentication = authenticationManager.authenticate(
+					new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
+
+			return ResponseEntity.ok("Login Successful : " + authentication.getName());
+
+		} catch (BadCredentialsException ex) {
+
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password");
+
+		} catch (Exception ex) {
+
+			ex.printStackTrace();
+
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Authentication failed");
+		}
+	}
+
+	@GetMapping("/users")
+	public ResponseEntity<?> getUsersData() {
+
+		List<Map<String, Object>> data = dynamicSQLRunner.getDetailsFromDB();
+
+		return ResponseEntity.ok(data);
+	}
+
+	@PostMapping("/reset-password")
+	public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequest request) {
+
+		customUserDetailsService.resetPassword(request);
+
+		return ResponseEntity.ok("Password updated successfully");
+	}
 }

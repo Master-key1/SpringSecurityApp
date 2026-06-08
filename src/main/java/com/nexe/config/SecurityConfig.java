@@ -45,7 +45,7 @@ public class SecurityConfig {
                         "/authenticate"
                 ).permitAll()
 
-                // Secure all other endpoints
+                .requestMatchers("/users").hasAuthority("ROLE_ADMIN")                // Secure all other endpoints
                 .anyRequest().authenticated()
             );
 

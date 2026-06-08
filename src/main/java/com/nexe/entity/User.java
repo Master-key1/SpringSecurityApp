@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.Collections;
 
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import jakarta.persistence.*;
@@ -27,7 +28,8 @@ import jakarta.persistence.*;
 @Table(
     name = "users",
     uniqueConstraints = {
-        @UniqueConstraint(columnNames = "username")
+        @UniqueConstraint(columnNames = "username"),
+        @UniqueConstraint(columnNames = "email")
     }
 )
 public class User implements UserDetails {
@@ -58,6 +60,36 @@ public class User implements UserDetails {
     private String username;
 
     /**
+     * EMAIL
+     *
+     * PURPOSE:
+     * - Stores the user's email address
+     * - Can be used for notifications, password reset,
+     *   account verification, etc.
+     *
+     * DATABASE:
+     * - NOT NULL
+     * - UNIQUE
+     */
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    /**
+     * USER ROLE
+     *
+     * PURPOSE:
+     * - Defines permissions granted to the user
+     * - Used by Spring Security for authorization
+     *
+     * DATABASE:
+     * - Stored as String
+     * - Example: ROLE_USER, ROLE_ADMIN
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role;
+
+    /**
      * PASSWORD
      *
      * PURPOSE:
@@ -67,6 +99,7 @@ public class User implements UserDetails {
      * - Never store plain text passwords
      * - Always encode before saving
      */
+    @Column(nullable = false)
     private String password;
 
     /**
@@ -74,9 +107,9 @@ public class User implements UserDetails {
      *
      * REQUIRED BY:
      * - JPA/Hibernate
-     * - Object creation during database operations
      */
-    public User() {}
+    public User() {
+    }
 
     /**
      * PARAMETERIZED CONSTRUCTOR
@@ -84,9 +117,11 @@ public class User implements UserDetails {
      * PURPOSE:
      * - Convenient way to create users
      */
-    public User(String username, String password) {
+    public User(String username, String email, String password, Role role) {
         this.username = username;
+        this.email = email;
         this.password = password;
+        this.role = role;
     }
 
     /**
@@ -107,10 +142,6 @@ public class User implements UserDetails {
      * GET USERNAME
      *
      * OVERRIDDEN FROM UserDetails
-     *
-     * PURPOSE:
-     * - Spring Security uses this during authentication
-     * - Returns unique login identifier
      */
     @Override
     public String getUsername() {
@@ -125,12 +156,37 @@ public class User implements UserDetails {
     }
 
     /**
+     * GET EMAIL
+     */
+    public String getEmail() {
+        return email;
+    }
+
+    /**
+     * SET EMAIL
+     */
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    /**
+     * GET ROLE
+     */
+    public Role getRole() {
+        return role;
+    }
+
+    /**
+     * SET ROLE
+     */
+    public void setRole(Role role) {
+        this.role = role;
+    }
+
+    /**
      * GET PASSWORD
      *
      * OVERRIDDEN FROM UserDetails
-     *
-     * PURPOSE:
-     * - Spring Security uses this to verify credentials
      */
     @Override
     public String getPassword() {
@@ -139,41 +195,29 @@ public class User implements UserDetails {
 
     /**
      * SET PASSWORD
-     *
-     * NOTE:
-     * - Password should already be encoded before storing
      */
     public void setPassword(String password) {
         this.password = password;
     }
 
     /**
-     * USER ROLES / AUTHORITIES
+     * USER AUTHORITIES
      *
      * PURPOSE:
-     * - Defines permissions assigned to the user
-     *
-     * CURRENT IMPLEMENTATION:
-     * - No roles assigned
-     * - Returns empty authority list
-     *
-     * EXAMPLE (future):
-     * - ROLE_USER
-     * - ROLE_ADMIN
+     * - Converts Role enum into Spring Security authority
+     * - Example:
+     *   ROLE_USER  -> GrantedAuthority("ROLE_USER")
+     *   ROLE_ADMIN -> GrantedAuthority("ROLE_ADMIN")
      */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.emptyList();
+        return Collections.singletonList(
+                new SimpleGrantedAuthority(role.name())
+        );
     }
 
     /**
      * ACCOUNT EXPIRATION STATUS
-     *
-     * PURPOSE:
-     * - Determines whether account has expired
-     *
-     * CURRENT:
-     * - Always valid
      */
     @Override
     public boolean isAccountNonExpired() {
@@ -182,12 +226,6 @@ public class User implements UserDetails {
 
     /**
      * ACCOUNT LOCK STATUS
-     *
-     * PURPOSE:
-     * - Determines whether account is locked
-     *
-     * CURRENT:
-     * - Never locked
      */
     @Override
     public boolean isAccountNonLocked() {
@@ -196,12 +234,6 @@ public class User implements UserDetails {
 
     /**
      * CREDENTIAL EXPIRATION STATUS
-     *
-     * PURPOSE:
-     * - Determines whether password has expired
-     *
-     * CURRENT:
-     * - Never expires
      */
     @Override
     public boolean isCredentialsNonExpired() {
@@ -210,12 +242,6 @@ public class User implements UserDetails {
 
     /**
      * ACCOUNT ENABLED STATUS
-     *
-     * PURPOSE:
-     * - Determines whether account is active
-     *
-     * CURRENT:
-     * - Always enabled
      */
     @Override
     public boolean isEnabled() {

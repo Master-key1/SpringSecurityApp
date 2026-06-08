@@ -4,6 +4,7 @@ import org.springframework.security.core.userdetails.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.nexe.entity.ResetPasswordRequest;
 import com.nexe.entity.User;
 import com.nexe.exception.UserAlreadyExitsException;
 import com.nexe.repo.UserDetailsRepo;
@@ -82,10 +83,20 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username)
             throws UsernameNotFoundException {
 
-        return userDetailsRepo.findByUsername(username)
+    	UserDetails user= userDetailsRepo.findByUsername(username)
                 .orElseThrow(() ->
                         new UsernameNotFoundException(
                                 "User not found: " + username));
+    	  System.out.println("===== USER DETAILS LOADED =====");
+    	    System.out.println("Username: " + user.getUsername());
+    	    System.out.println("Authorities: " + user.getAuthorities());
+    	    System.out.println("Account Non Expired: " + user.isAccountNonExpired());
+    	    System.out.println("Account Non Locked: " + user.isAccountNonLocked());
+    	    System.out.println("Enabled: " + user.isEnabled());
+    	    System.out.println("================================");
+
+    	    return user;
+    	
     }
 
     /**
@@ -131,4 +142,25 @@ public class CustomUserDetailsService implements UserDetailsService {
          */
         return userDetailsRepo.save(user);
     }
+    public void resetPassword(ResetPasswordRequest request) {
+
+        User user = userDetailsRepo.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // STEP 1: validate OTP (you must implement OTP storage)
+        if (!isValidOtp(request.getEmail(), request.getOtp())) {
+            throw new RuntimeException("Invalid OTP");
+        }
+
+        // STEP 2: update password
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+
+        userDetailsRepo.save(user);
+    }
+
+    private boolean isValidOtp(String email, String otp) {
+        // TODO: check OTP from DB / cache (Redis recommended)
+        return true; // placeholder
+    }
+    
 }

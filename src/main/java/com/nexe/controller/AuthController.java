@@ -10,6 +10,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -106,10 +107,19 @@ public class AuthController {
              * - Client will store token and send in Authorization header
              */
             Map<String, Object> response = new HashMap<>();
+
             response.put("message", "Authentication successful");
             response.put("token", jwtToken);
             response.put("username", auth.getName());
+            response.put("requestUsername", authRequest.getUsername());
             response.put("isAuthenticated", auth.isAuthenticated());
+
+            Object principal = auth.getPrincipal();
+
+            if (principal instanceof UserDetails userDetails) {
+                response.put("principalUsername", userDetails.getUsername());
+                response.put("authorities", userDetails.getAuthorities());
+            }
 
             return ResponseEntity.ok(response);
 
