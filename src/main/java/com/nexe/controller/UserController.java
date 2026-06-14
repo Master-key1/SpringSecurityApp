@@ -82,4 +82,11 @@ public class UserController {
 
 		return ResponseEntity.ok("Password updated successfully");
 	}
+	
+	@GetMapping("/test")
+	public String getData() {
+		
+		return  "Successfully";
+	}
 }
+
