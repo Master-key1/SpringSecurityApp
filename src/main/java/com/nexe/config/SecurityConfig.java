@@ -42,7 +42,8 @@ public class SecurityConfig {
                 .requestMatchers(
                         "/register",
                         "/login",
-                        "/authenticate"
+                        "/authenticate",
+                        "/h2-console"
                 ).permitAll()
 
                 .requestMatchers("/users").hasAuthority("ROLE_ADMIN")                // Secure all other endpoints
