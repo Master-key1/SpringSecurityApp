@@ -1,7 +1,10 @@
 package com.nexe.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -10,6 +13,7 @@ public class Shop {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "shop_id")
     private Long shopId;
 
     // ===== Basic Details =====
@@ -39,10 +43,16 @@ public class Shop {
     private LocalDateTime updatedAt;
 
     // ===== RELATION: MENU =====
-    @OneToMany(mappedBy = "shop", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<MenuItem> menuItems;
+    @OneToMany(
+            mappedBy = "shop",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    @JsonManagedReference
+    private List<MenuItem> menuItems = new ArrayList<>();
 
-    // ================= Lifecycle =================
+    // ===== Lifecycle =====
 
     @PrePersist
     public void prePersist() {
@@ -56,7 +66,19 @@ public class Shop {
         this.updatedAt = LocalDateTime.now();
     }
 
-    // ================= GETTERS & SETTERS =================
+    // ===== Helper Methods =====
+
+    public void addMenuItem(MenuItem menuItem) {
+        menuItems.add(menuItem);
+        menuItem.setShop(this);
+    }
+
+    public void removeMenuItem(MenuItem menuItem) {
+        menuItems.remove(menuItem);
+        menuItem.setShop(null);
+    }
+
+    // ===== Getters & Setters =====
 
     public Long getShopId() {
         return shopId;
@@ -184,5 +206,9 @@ public class Shop {
 
     public void setMenuItems(List<MenuItem> menuItems) {
         this.menuItems = menuItems;
+
+        if (menuItems != null) {
+            menuItems.forEach(item -> item.setShop(this));
+        }
     }
 }

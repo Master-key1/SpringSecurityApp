@@ -19,7 +19,7 @@ public class ShopController {
     }
 
     // ✅ Create Shop
-    @PostMapping ("/createShop")
+    @PostMapping 
     public ResponseEntity<Shop> createShop(@RequestBody Shop shop) {
         Shop savedShop = shopService.createShop(shop);
         return ResponseEntity.ok(savedShop);

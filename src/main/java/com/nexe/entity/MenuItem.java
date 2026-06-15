@@ -1,5 +1,6 @@
 package com.nexe.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 
 @Entity
@@ -10,15 +11,20 @@ public class MenuItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private String itemName;
+
+    @Column(nullable = false)
     private Double price;
+
     private String category;
 
-    @ManyToOne
-    @JoinColumn(name = "shop_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shop_id", nullable = false)
+    @JsonBackReference
     private Shop shop;
 
-    // Getters & Setters
+    // ===== Getters & Setters =====
 
     public Long getId() {
         return id;
