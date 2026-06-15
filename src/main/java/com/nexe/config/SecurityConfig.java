@@ -6,6 +6,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,36 +23,42 @@ public class SecurityConfig {
      *
      * PURPOSE:
      * - Defines Spring Security configuration for HTTP requests
-     * - Controls which endpoints are public and which require authentication
-     * - Registers JWT filter in the request processing chain
-     *
-     * FUNCTIONALITY:
-     * - Disables CSRF (needed for stateless REST APIs)
-     * - Allows public access to specific endpoints (register/login/authenticate)
-     * - Protects all other endpoints
-     * - Ensures JWT filter runs before UsernamePasswordAuthenticationFilter
-     *   so that token is validated before Spring Security processes request
+     * - Controls public vs secured endpoints
+     * - Registers JWT filter before authentication filter
      */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            JwtAuthFilter jwtAuthFilter) throws Exception {
 
-        http.csrf(csrf -> csrf.disable())
+        http
+            // Disable CSRF for stateless REST APIs
+            .csrf(csrf -> csrf.disable())
+
+            // IMPORTANT: Stateless session (JWT based auth)
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+
+            // H2 console support (DEV ONLY)
+            .headers(headers -> headers.frameOptions(frame -> frame.disable()))
+
+            // Authorization rules
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints - no authentication required
                 .requestMatchers(
-                        "/register",
-                        "/login",
-                        "/authenticate",
-                        "/h2-console",
-                        "/test"
+                    "/register",
+                    "/login",
+                    "/authenticate",
+                    "/test",
+                    "/h2-console/**"
                 ).permitAll()
 
-                .requestMatchers("/users").hasAuthority("ROLE_ADMIN")                // Secure all other endpoints
+                // ROLE_ADMIN expected in authorities as ROLE_ADMIN
+                .requestMatchers("/users").hasAuthority("ROLE_ADMIN")
+
                 .anyRequest().authenticated()
             );
 
-        // Add JWT authentication filter into filter chain
+        // Add JWT filter before Spring Security authentication filter
         http.addFilterBefore(jwtAuthFilter,
                 UsernamePasswordAuthenticationFilter.class);
 
@@ -60,15 +67,6 @@ public class SecurityConfig {
 
     /**
      * PASSWORD ENCODER
-     *
-     * PURPOSE:
-     * - Encodes user passwords before saving into database
-     * - Ensures passwords are not stored in plain text
-     *
-     * FUNCTIONALITY:
-     * - Uses BCrypt hashing algorithm
-     * - Provides one-way encryption (cannot be decrypted)
-     * - Used during registration and authentication
      */
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -76,31 +74,25 @@ public class SecurityConfig {
     }
 
     /**
-     * AUTHENTICATION MANAGER
+     * AUTHENTICATION MANAGER (FIXED FOR SPRING SECURITY 6)
      *
-     * PURPOSE:
-     * - Core component responsible for authenticating users
-     * - Used during login process (username/password validation)
-     *
-     * FUNCTIONALITY:
-     * - Uses DaoAuthenticationProvider to fetch user details from DB
-     * - Compares raw password with encoded password
-     * - Delegates user lookup to UserDetailsService
-     * - Delegates password validation to PasswordEncoder
+     * FIX:
+     * - DaoAuthenticationProvider constructor no longer accepts UserDetailsService
+     * - Must use setter injection
      */
     @Bean
     public AuthenticationManager authenticationManager(
             UserDetailsService userDetailsService,
             PasswordEncoder passwordEncoder) {
 
-        // Authentication provider that uses database for authentication
-        DaoAuthenticationProvider provider =
-                new DaoAuthenticationProvider(userDetailsService);
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
 
-        // Set password encoder for validating passwords
+        // Set UserDetailsService (NEW WAY)
+        provider.setUserDetailsService(userDetailsService);
+
+        // Set password encoder
         provider.setPasswordEncoder(passwordEncoder);
 
-        // Wrap provider inside AuthenticationManager
         return new ProviderManager(provider);
     }
 }
